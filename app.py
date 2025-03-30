@@ -5,8 +5,6 @@ import re
 import os
 from dotenv import load_dotenv
 
-
-
 # Load environment variables
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -16,19 +14,6 @@ if not GEMINI_API_KEY:
     st.error("API key is missing! Add it to your .env file.")
 else:
     genai.configure(api_key=GEMINI_API_KEY)
-
-
-import requests
-
-def test_youtube_access():
-    try:
-        response = requests.get("https://www.youtube.com", timeout=5)
-        return response.status_code
-    except Exception as e:
-        return f"Failed: {e}"
-
-st.write("Testing YouTube Access:", test_youtube_access())
-
 
 def extract_video_id(url):
     """Extracts the video ID from various YouTube URL formats."""
