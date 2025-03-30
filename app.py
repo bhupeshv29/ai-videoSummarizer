@@ -1,36 +1,44 @@
-from flask import Flask, render_template, request, jsonify
-from youtube_transcript_api import YouTubeTranscriptApi
+import streamlit as st
 import google.generativeai as genai
-from dotenv import load_dotenv
+from youtube_transcript_api import YouTubeTranscriptApi
+import re
 import os
+from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Configure Gemini API
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+if not GEMINI_API_KEY:
+    st.error("API key is missing! Add it to your .env file.")
+else:
+    genai.configure(api_key=GEMINI_API_KEY)
 
-app = Flask(__name__)
-
-def get_youtube_transcript(video_id):
-    """Fetches transcript of a YouTube video using proxies."""
-    proxies_list = [
-        "http://144.217.7.61:3129",
-        "http://51.159.115.233:3128",
-        "http://195.154.255.118:80",
+def extract_video_id(url):
+    """Extracts the video ID from various YouTube URL formats."""
+    patterns = [
+        r"(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})",
+        r"(?:https?:\/\/)?(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]{11})",
+        r"(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})",
+        r"(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})"
     ]
     
-    for proxy in proxies_list:
-        try:
-            print(f"Trying proxy: {proxy}")
-            proxies = {"http": proxy, "https": proxy}
-            transcript = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
-            text = " ".join([t["text"] for t in transcript])
-            return text
-        except Exception as e:
-            print(f"Proxy {proxy} failed: {e}")
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
     
-    return "Error: All proxies failed. Try again later."
+    return None  # Invalid URL
+
+def get_youtube_transcript(video_id):
+    """Fetches transcript of a YouTube video."""
+    try:
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        text = " ".join([t["text"] for t in transcript])
+        return text
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 def summarize_text(text):
     """Summarizes text using Gemini-2.0-Flash."""
@@ -38,21 +46,26 @@ def summarize_text(text):
     response = model.generate_content(f"Summarize this transcript: {text}")
     return response.text if response else "Summarization failed."
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# Streamlit UI
+st.set_page_config(page_title="YouTube Video Summarizer", page_icon="📺", layout="centered")
+st.title("📺 YouTube Video Summarizer")
 
-@app.route('/summarize', methods=['POST'])
-def summarize():
-    video_url = request.form['video_url']
-    video_id = video_url.split("v=")[-1].split("&")[0]
-    transcript = get_youtube_transcript(video_id)
-    
-    if "Error" in transcript:
-        return jsonify({"error": transcript})
-    
-    summary = summarize_text(transcript)
-    return jsonify({"summary": summary})
+video_url = st.text_input("Enter YouTube Video URL:")
+if st.button("Summarize"):
+    if video_url:
+        video_id = extract_video_id(video_url)
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+        if not video_id:
+            st.error("Invalid YouTube URL. Please enter a valid link.")
+        else:
+            transcript = get_youtube_transcript(video_id)
+
+            if "Error" in transcript:
+                st.error("Could not retrieve transcript. The video may not have subtitles.")
+            else:
+                st.info("Generating summary... Please wait.")
+                summary = summarize_text(transcript)
+                st.success("Summary Generated:")
+                st.write(summary)
+    else:
+        st.warning("Please enter a valid YouTube URL.")
