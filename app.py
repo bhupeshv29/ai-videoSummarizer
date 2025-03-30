@@ -5,6 +5,7 @@ import re
 import os
 import requests  # Import requests library for making YouTube API calls
 from dotenv import load_dotenv
+import yt_dlp
 
 # Load environment variables
 load_dotenv()
@@ -33,21 +34,31 @@ def extract_video_id(url):
     return None  # Invalid URL
 
 def get_youtube_transcript(video_id):
-    """Fetches transcript of a YouTube video with improved error handling."""
+    """Fetches transcript of a YouTube video with improved error handling using yt_dlp fallback."""
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
-        response = requests.get(f"https://www.youtube.com/watch?v={video_id}", headers=headers)
-
-        if response.status_code != 200:
-            return f"Error: Unable to fetch video page. Status Code: {response.status_code}"
-
+        # Try fetching transcript using YouTubeTranscriptApi
         transcript = YouTubeTranscriptApi.get_transcript(video_id)
-        text = " ".join([t["text"] for t in transcript])
-        return text
+        return " ".join([t["text"] for t in transcript])
     except Exception as e:
-        return f"Error: {str(e)}"
+        # If YouTubeTranscriptApi fails, try yt_dlp
+        try:
+            ydl_opts = {
+                'quiet': True,
+                'skip_download': True,
+                'writesubtitles': True,
+                'subtitleslangs': ['en'],
+                'writeautomaticsub': True,
+                'outtmpl': '%(id)s.%(ext)s'
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
+                if 'automatic_captions' in info:
+                    captions = info['automatic_captions'].get('en', [])
+                    if captions:
+                        return captions[0]['url']  # Returns the URL to download captions
+                return "Error: No transcript found using yt_dlp."
+        except Exception as e:
+            return f"Error: Failed to retrieve transcript with yt_dlp. {str(e)}"
 
 def summarize_text(text):
     """Summarizes text using Gemini-2.0-Flash."""
