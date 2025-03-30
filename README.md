@@ -13,16 +13,16 @@ cd ai-videoSummarizer
 ```
 
 ### 2  Make .env file and paste ⬇️
-```GEMINI_API_KEY="your api key"```
+```bash GEMINI_API_KEY="your api key"```
 
 
 ### 3 Installing Dependencies
-```pip install -r requirements.txt```
+```bash pip install -r requirements.txt```
 
 
 
 
 ### 4 Running the Project
-```streamlit run app.py```
+```bash streamlit run app.py```
 
 
