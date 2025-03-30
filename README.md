@@ -13,7 +13,7 @@ cd ai-videoSummarizer
 ```
 
 ### 2  Make .env file and paste ⬇️
-```bash GEMINI_API_KEY="your api key"```
+```bash GEMINI_API_KEY="your_api_key"```
 
 
 ### 3 Installing Dependencies
