@@ -69,6 +69,3 @@ if st.button("Summarize"):
                 st.write(summary)
     else:
         st.warning("Please enter a valid YouTube URL.")
-
-    if __name__ == "__main__":
-            st.run()
