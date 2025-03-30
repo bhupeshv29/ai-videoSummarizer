@@ -1,4 +1,5 @@
 streamlit
 google-generativeai
+requests
 youtube-transcript-api
 python-dotenv
