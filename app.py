@@ -3,6 +3,7 @@ import google.generativeai as genai
 from youtube_transcript_api import YouTubeTranscriptApi
 import re
 import os
+import requests  # Import requests library for making YouTube API calls
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -32,8 +33,16 @@ def extract_video_id(url):
     return None  # Invalid URL
 
 def get_youtube_transcript(video_id):
-    """Fetches transcript of a YouTube video."""
+    """Fetches transcript of a YouTube video with improved error handling."""
     try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        response = requests.get(f"https://www.youtube.com/watch?v={video_id}", headers=headers)
+
+        if response.status_code != 200:
+            return f"Error: Unable to fetch video page. Status Code: {response.status_code}"
+
         transcript = YouTubeTranscriptApi.get_transcript(video_id)
         text = " ".join([t["text"] for t in transcript])
         return text
