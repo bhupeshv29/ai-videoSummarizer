@@ -13,13 +13,24 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 app = Flask(__name__)
 
 def get_youtube_transcript(video_id):
-    """Fetches transcript of a YouTube video."""
-    try:
-        transcript = YouTubeTranscriptApi.get_transcript(video_id)
-        text = " ".join([t["text"] for t in transcript])
-        return text
-    except Exception as e:
-        return f"Error: {str(e)}"
+    """Fetches transcript of a YouTube video using proxies."""
+    proxies_list = [
+        "http://144.217.7.61:3129",
+        "http://51.159.115.233:3128",
+        "http://195.154.255.118:80",
+    ]
+    
+    for proxy in proxies_list:
+        try:
+            print(f"Trying proxy: {proxy}")
+            proxies = {"http": proxy, "https": proxy}
+            transcript = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
+            text = " ".join([t["text"] for t in transcript])
+            return text
+        except Exception as e:
+            print(f"Proxy {proxy} failed: {e}")
+    
+    return "Error: All proxies failed. Try again later."
 
 def summarize_text(text):
     """Summarizes text using Gemini-2.0-Flash."""
